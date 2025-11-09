@@ -1,0 +1,77 @@
+﻿@model Wiener.Models.ViewModels.PartnerDetailsViewModel
+
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">Detalji partnera</h5>
+    <button type="button" class="btn-close btn-close-white"
+            data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>Puno ime:</strong>
+            <p>@Model.FullName</p>
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Broj partnera:</strong>
+            <p>@Model.PartnerNumber</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>OIB:</strong>
+            <p>@Model.CroatianPIN</p>
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Tip partnera:</strong>
+            <p>@Model.PartnerType</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <strong>Adresa:</strong>
+            <p>@Model.Address</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>Datum kreiranja:</strong>
+            <p>@Model.DateCreated?.ToString("dd.MM.yyyy HH:mm")</p>
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Kreirao korisnik:</strong>
+            <p>@Model.CreatedByUser</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>Strani partner:</strong>
+            <p>@(Model.IsForeign ? "Da" : "Ne")</p>
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Spol:</strong>
+            <p>@Model.Gender</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <strong>Eksterni kod:</strong>
+            <p>@Model.ExternalCode</p>
+        </div>
+        <div class="col-md-6 mb-3">
+            <strong>Broj polica:</strong>
+            <p>@Model.PolicyCount</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <strong>Ukupan iznos polica:</strong>
+            <p>@Model.TotalPolicyAmount.ToString("N2") EUR</p>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary"
+            data-bs-dismiss="modal">
+        Zatvori
+    </button>
+</div>

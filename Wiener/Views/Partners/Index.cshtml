@@ -1,0 +1,139 @@
+﻿@model Wiener.Models.ViewModels.PartnerListViewModel
+
+@{
+    ViewData["Title"] = "Partneri";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h2>Lista partnera</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Dodaj partnera
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Puno ime</th>
+                            <th>Broj partnera</th>
+                            <th>OIB</th>
+                            <th>Tip partnera</th>
+                            <th>Datum kreiranja</th>
+                            <th>Strani partner</th>
+                            <th>Spol</th>
+                            <th>Akcije</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Partners.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <em>Nema partnera u bazi.</em>
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var partner in Model.Partners)
+                        {
+                            <tr class="partner-row @(partner.IsNewlyAdded ? "table-success fw-bold" : "")"
+                                data-partner-id="@partner.Id"
+                                style="cursor: pointer;">
+                                <td>
+                                    @if (partner.RequiresFlag)
+                                    {
+                                        <span class="text-danger">* </span>
+                                    }
+                                    @partner.FullName
+                                </td>
+                                <td>@partner.PartnerNumber</td>
+                                <td>@partner.CroatianPIN</td>
+                                <td>@partner.PartnerType</td>
+                                <td>
+                                    @partner.DateCreated?.ToString("dd.MM.yyyy HH:mm")
+                                </td>
+                                <td>
+                                    @if (partner.IsForeign)
+                                    {
+                                        <span class="badge bg-info">Da</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Ne</span>
+                                    }
+                                </td>
+                                <td>@partner.Gender</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success add-policy-btn"
+                                            data-partner-id="@partner.Id"
+                                            data-partner-name="@partner.FullName"
+                                            onclick="event.stopPropagation();">
+                                        <i class="bi bi-file-earmark-plus"></i> Dodaj policu
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal za detalje partnera -->
+<div class="modal fade" id="partnerDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="partnerDetailsContent">
+            <!-- Content će se učitati putem AJAX-a -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal za unos police -->
+<div class="modal fade" id="policyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" id="policyModalContent">
+            <!-- Content će se učitati putem AJAX-a -->
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Klik na redak - otvara detalje partnera
+            $('.partner-row').on('click', function() {
+                var partnerId = $(this).data('partner-id');
+
+                $.get('@Url.Action("PartnerDetailsModal", "Partners")',
+                    { id: partnerId },
+                    function(data) {
+                        $('#partnerDetailsContent').html(data);
+                        $('#partnerDetailsModal').modal('show');
+                    }
+                );
+            });
+
+            // Klik na gumb za dodavanje police
+            $('.add-policy-btn').on('click', function(e) {
+                e.stopPropagation();
+                var partnerId = $(this).data('partner-id');
+
+                $.get('@Url.Action("CreatePolicyModal", "Partners")',
+                    { partnerId: partnerId },
+                    function(data) {
+                        $('#policyModalContent').html(data);
+                        $('#policyModal').modal('show');
+                    }
+                );
+            });
+        });
+    </script>
+}

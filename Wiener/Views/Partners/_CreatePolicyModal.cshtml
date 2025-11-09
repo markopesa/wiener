@@ -1,0 +1,105 @@
+﻿@model Wiener.Models.ViewModels.CreatePolicyViewModel
+
+<div class="modal-header bg-success text-white">
+    <h5 class="modal-title">Dodaj policu za partnera</h5>
+    <button type="button" class="btn-close btn-close-white"
+            data-bs-dismiss="modal"></button>
+</div>
+<form id="createPolicyForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="PartnerId" />
+
+    <div class="modal-body">
+        <div class="alert alert-info">
+            <strong>Partner:</strong> @Model.PartnerName
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="PolicyNumber" class="form-label"></label>
+            <input asp-for="PolicyNumber" class="form-control"
+                   placeholder="Unesite broj police (10-15 znakova)"
+                   maxlength="15">
+            <span asp-validation-for="PolicyNumber"
+                  class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="PolicyAmount" class="form-label"></label>
+            <div class="input-group">
+                <input asp-for="PolicyAmount" type="number"
+                       step="0.01" class="form-control"
+                       placeholder="0.00" min="0.01">
+                <span class="input-group-text">EUR</span>
+            </div>
+            <span asp-validation-for="PolicyAmount"
+                  class="text-danger"></span>
+        </div>
+
+        <div id="policyFormErrors"
+             class="alert alert-danger d-none"></div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal">
+            Odustani
+        </button>
+        <button type="submit" class="btn btn-success"
+                id="savePolicyBtn">
+            <i class="bi bi-save"></i> Spremi policu
+        </button>
+    </div>
+</form>
+
+<script>
+    $(document).ready(function() {
+        $('#createPolicyForm').on('submit', function(e) {
+            e.preventDefault();
+
+            $('#policyFormErrors').addClass('d-none').html('');
+            $('#savePolicyBtn').prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm"></span> Spremanje...');
+
+            $.ajax({
+                url: '@Url.Action("CreatePolicy", "Partners")',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        $('#policyModal').modal('hide');
+
+                        var alert = `<div class="alert alert-success alert-dismissible fade show">
+                            <i class="bi bi-check-circle"></i> ${response.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>`;
+
+                        $('.container-fluid').prepend(alert);
+
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        var errorHtml = '<ul class="mb-0">';
+                        response.errors.forEach(function(error) {
+                            errorHtml += '<li>' + error + '</li>';
+                        });
+                        errorHtml += '</ul>';
+
+                        $('#policyFormErrors').removeClass('d-none')
+                            .html(errorHtml);
+
+                        $('#savePolicyBtn').prop('disabled', false)
+                            .html('<i class="bi bi-save"></i> Spremi policu');
+                    }
+                },
+                error: function() {
+                    $('#policyFormErrors').removeClass('d-none')
+                        .html('Greška prilikom komunikacije sa serverom');
+
+                    $('#savePolicyBtn').prop('disabled', false)
+                        .html('<i class="bi bi-save"></i> Spremi policu');
+                }
+            });
+        });
+    });
+</script>

@@ -74,10 +74,178 @@ Zamišljeni relacijski odnosi (ERa dijagram):
 ## 4. Pseudokod ključnih procesa
 
 ### Proces 1 — Ulazak vozila
+
+Prilikom ulaska vozila, sustav pronalazi slobodno mjesto preko Redis-a (da bi izbjegao čitanje iz baze pri svakom ulasku).  
+Nakon toga upisuje sesiju u SQL bazu i ažurira cache.
+
+```csharp
+public async Task HandleVehicleEntryAsync(string vehicleId)
+{
+    int freeSpotId = await _redis.GetAsync<int>("garage:freespots:next");
+
+    if (freeSpotId == 0)
+    {
+        throw new InvalidOperationException("No free parking spots.");
+    }
+
+    using var transaction = await _db.BeginTransactionAsync();
+
+    try
+    {
+        // kreiraj parking
+        var session = new ParkingSession
+        {
+            SpotId = freeSpotId,
+            VehicleIdentifier = vehicleId,
+            EntryTime = DateTime.UtcNow,
+            Status = "Active"
+        };
+
+        await _db.ParkingSessions.AddAsync(session);
+        await _db.SaveChangesAsync();
+
+        // označi mjesto kao zauzeto 
+        await _db.ExecuteSqlAsync(
+            "UPDATE ParkingSpots SET IsOccupied = 1 WHERE SpotId = @id", new { id = freeSpotId });
+
+        await _redis.DecrementAsync("garage:freespots:count");
+        await _redis.PublishAsync("events:spot:occupied", freeSpotId.ToString());
+
+        await transaction.CommitAsync();
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
+```
+
 ### Proces 2 — Izračun i naplata parkiranja
+
+Ovdje koristimo `PricingService` i `WeatherService` za dohvat tarifa i vremenskih podataka.  
+Popust se primjenjuje ako je vozilo bilo barem 33% vremena izloženo kiši.
+
+```csharp
+public async Task ProcessPaymentAsync(long sessionId)
+{
+    var session = await _db.ParkingSessions.FindAsync(sessionId);
+
+    if (session == null || session.ExitTime == null)
+        throw new InvalidOperationException("Invalid session.");
+
+    var duration = (session.ExitTime.Value - session.EntryTime).TotalHours;
+    var baseRate = await _pricingService.GetActiveRateAsync("Hourly");
+
+    decimal baseAmount = baseRate * (decimal)Math.Ceiling(duration);
+
+    // dohvati logove o vremenu
+    bool hasRainDiscount = await _weatherService.WasRainingForMoreThanAsync(
+        session.EntryTime, session.ExitTime.Value, thresholdPercent: 33);
+
+    decimal discount = 0;
+    string? discountReason = null;
+
+    if (!session.Spot.IsCovered && hasRainDiscount)
+    {
+        discount = baseAmount * 0.5m;
+        discountReason = "Rain Discount";
+    }
+
+    decimal finalAmount = baseAmount - discount;
+
+    var payment = new Payment
+    {
+        SessionId = sessionId,
+        BaseAmount = baseAmount,
+        DiscountAmount = discount,
+        Amount = finalAmount,
+        DiscountReason = discountReason,
+        PaymentMethod = "Card",
+        Status = "Completed",
+        PaymentTime = DateTime.UtcNow
+    };
+
+    await _db.Payments.AddAsync(payment);
+    await _db.SaveChangesAsync();
+
+    await _redis.PublishAsync("events:payment:completed", sessionId.ToString());
+
+    session.Status = "Paid";
+    await _db.SaveChangesAsync();
+}
+```
+
 ### Proces 3 — Izlazak vozila
+
+Sustav provjerava status plaćanja i vrijeme otkako je plaćeno.Ako je prošlo više od 10 minuta, naplaćuje dodatni sat.
+
+```csharp
+public async Task HandleVehicleExitAsync(string ticketNumber)
+{
+    var session = await _db.ParkingSessions
+        .Include(s => s.Payment)
+        .Include(s => s.Spot)
+        .FirstOrDefaultAsync(s => s.TicketNumber == ticketNumber);
+
+    if (session == null)
+        throw new InvalidOperationException("Ticket not found.");
+
+    if (session.Status != "Paid")
+        throw new Exception("Payment required before exit.");
+
+    var minutesSincePayment = (DateTime.UtcNow - session.Payment.PaymentTime).TotalMinutes;
+
+    if (minutesSincePayment > 10)
+    {
+        await _paymentService.ChargeExtraHourAsync(session.SessionId);
+    }
+
+    session.ExitTime = DateTime.UtcNow;
+    session.Status = "Completed";
+    session.Spot.IsOccupied = false;
+
+    await _db.SaveChangesAsync();
+
+    await _redis.IncrementAsync("garage:freespots:count");
+    await _redis.PublishAsync("events:spot:free", session.Spot.SpotId.ToString());
+}
+```
+
 ### Proces 4 — Generiranje mjesečnog izvještaja
 
+```csharp
+public async Task GenerateMonthlyReportAsync(int year, int month)
+{
+    var sessions = await _db.ParkingSessions
+        .Where(s => s.EntryTime.Year == year && s.EntryTime.Month == month)
+        .ToListAsync();
 
+    var totalRevenue = sessions.Sum(s => s.Payment?.Amount ?? 0);
+    var totalDiscount = sessions.Sum(s => s.Payment?.DiscountAmount ?? 0);
+    var rainDiscountAmt = sessions
+        .Where(s => s.Payment?.DiscountReason == "Rain Discount")
+        .Sum(s => s.Payment.DiscountAmount);
+
+    var occupancyRate = await _redis.GetAsync<decimal>("garage:avg:occupancy:" + month);
+
+    var report = new MonthlyReport
+    {
+        Year = year,
+        Month = month,
+        TotalSessions = sessions.Count,
+        TotalRevenue = totalRevenue,
+        TotalDiscount = totalDiscount,
+        RainDiscountAmount = rainDiscountAmt,
+        AverageOccupancyRate = occupancyRate,
+        GeneratedAt = DateTime.UtcNow
+    };
+
+    await _db.MonthlyReports.AddAsync(report);
+    await _db.SaveChangesAsync();
+
+    await _redis.SetAsync($"reports:{year}:{month}", report, TimeSpan.FromDays(30));
+}
+```
 
 

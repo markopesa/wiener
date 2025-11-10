@@ -1,3 +1,80 @@
+# Zadatak 1 — Upravljanje partnerima osiguravajućeg društva
+
+## Opis
+
+Jednostavna web aplikacija razvijena u **ASP.NET Core** s **Dapper ORM**‑om, koja omogućuje upravljanje partnerima i policama osiguranja.
+
+Aplikacija sadrži:
+- **Početnu stranicu** s listom svih partnera (Full Name, tip, datum, oznaka * ako partner ima > 5 polica ili ukupno > 5000 kn),
+- **Formu za unos novog partnera** s validacijom svih polja,
+- **Dijalog za unos polica** povezanih s partnerom,
+- **Seeder** za automatsko punjenje baze prilikom prvog pokretanja.
+
+---
+
+## Tehnologije
+
+- **Backend:** C# / ASP.NET Core 8 MVC  
+- **Frontend:** HTML, JavaScript, Bootstrap 
+- **Baza:** SQL Server / LocalDB  
+- **ORM:** Dapper Micro ORM  
+
+---
+
+## Pokretanje projekta
+
+1. Klonirati repozitorij:
+
+2. Provjeriti da SQL Server (LocalDB) radi i ažurirati konekcijski string u `appsettings.Development.json`:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Server=localhost;Database=Wiener;Trusted_Connection=True;TrustServerCertificate=True;"
+   }
+   ```
+
+3. Pokrenuti inicijalnu SQL skriptu:
+   ```bash
+   Database/Scripts/create-database.sql
+   ```
+   Skripta kreira tablice:
+   - `PartnerTypes`
+   - `Partners`
+   - `Policies`
+
+4. Pokrenuti aplikaciju
+5. 
+   Aplikacija automatski poziva `DatabaseSeeder` iz `Data/Seed/DatabaseSeeder.cs`  
+   i puni bazu inicijalnim testnim podacima.
+ 
+---
+
+## Struktura baze
+
+<img width="1055" height="636" alt="image" src="https://github.com/user-attachments/assets/c8fcab6f-6106-42ec-93d0-1a2e3e220b79" />
+
+
+- **PartnerTypes** — Personal / Legal  
+- **Partners** — osnovni podaci o partneru  
+- **Policies** — police osiguranja povezane s partnerom  
+
+---
+
+## Inicijalni podaci
+
+- 5 partnera se seeda automatski (Personal / Legal)  
+- Partner **Marko Marković** ima 6 polica  → prikazan sa *  
+- Partner **Ana Anić** ima ukupnu vrijednost polica > 5000 kn  → označen *  
+
+---
+
+## Napomene
+
+- Aplikacija je ogledni primjer rješenja i ispunjava osnovne zahtjeve zadatka.  
+- Nema implementiranu autentifikaciju / autorizaciju (samo demo).  
+- Inicijalni seed omogućuje testiranje bez ručnog unosa.
+
+---
+
 # Zadatak 2 — Sustav za upravljanje parkiralištem
 
 ## 1. Analiza korisničkog zahtjeva

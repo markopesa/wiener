@@ -87,53 +87,35 @@
     </div>
 </div>
 
-<!-- Modal za detalje partnera -->
 <div class="modal fade" id="partnerDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content" id="partnerDetailsContent">
-            <!-- Content će se učitati putem AJAX-a -->
         </div>
     </div>
 </div>
 
-<!-- Modal za unos police -->
 <div class="modal fade" id="policyModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content" id="policyModalContent">
-            <!-- Content će se učitati putem AJAX-a -->
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="~/js/app/services/partnerService.js"></script>
+    <script src="~/js/app/controllers/partnerIndexController.js"></script>
+    <script src="~/js/app/controllers/partnerCreatePolicyController.js"></script>
+
     <script>
-        $(document).ready(function() {
-            // Klik na redak - otvara detalje partnera
-            $('.partner-row').on('click', function() {
-                var partnerId = $(this).data('partner-id');
+        $(document).ready(function () {
+            var urlInfo = {
+                partnerDetailsUrl: '@Url.Action("PartnerDetailsModal", "Partners")',
+                createPolicyModalUrl: '@Url.Action("CreatePolicyModal", "Partners")',
+                createPolicyUrl: '@Url.Action("CreatePolicy", "Partners")'
+            };
 
-                $.get('@Url.Action("PartnerDetailsModal", "Partners")',
-                    { id: partnerId },
-                    function(data) {
-                        $('#partnerDetailsContent').html(data);
-                        $('#partnerDetailsModal').modal('show');
-                    }
-                );
-            });
-
-            // Klik na gumb za dodavanje police
-            $('.add-policy-btn').on('click', function(e) {
-                e.stopPropagation();
-                var partnerId = $(this).data('partner-id');
-
-                $.get('@Url.Action("CreatePolicyModal", "Partners")',
-                    { partnerId: partnerId },
-                    function(data) {
-                        $('#policyModalContent').html(data);
-                        $('#policyModal').modal('show');
-                    }
-                );
-            });
+            PartnerIndexController.init(urlInfo);
+            PartnerCreatePolicyController.init(urlInfo);
         });
     </script>
 }
